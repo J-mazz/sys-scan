@@ -43,9 +43,9 @@ void ComplianceScanner::scan(Report& report) {
         sum.total_controls++;
         if(!applicable) sum.not_applicable++; else if(passed) sum.passed++; else sum.failed++;
     }
-    // push scan result
-    if(!findings.empty()) {
-        ScanResult sr; sr.scanner_name = name(); sr.start_time = std::chrono::system_clock::now(); sr.end_time = sr.start_time; sr.findings = std::move(findings); report.add_result(std::move(sr));
+    // Add findings individually like other scanners
+    for(auto& f : findings) {
+        report.add_finding(this->name(), std::move(f));
     }
     // store summary into report meta extension for now (future: dedicated structure)
     for(const auto& kv : by_standard){

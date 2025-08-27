@@ -38,6 +38,7 @@ add_library(sys_scan_core
   src/core/JSONWriter.cpp
   src/core/Logging.cpp
   src/core/Config.cpp
+  src/core/Compliance.cpp
   src/scanners/ProcessScanner.cpp
   src/scanners/NetworkScanner.cpp
   src/scanners/KernelParamScanner.cpp
@@ -127,6 +128,7 @@ endif()
 add_executable(sys-scan src/main.cpp)
 
 target_link_libraries(sys-scan PRIVATE sys_scan_core)
+target_include_directories(sys-scan PRIVATE ${CMAKE_BINARY_DIR}/generated)
 
 # Tests
 if(BUILD_TESTS)
