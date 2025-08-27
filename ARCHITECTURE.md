@@ -78,20 +78,7 @@ CLI -> Config -> ScannerRegistry -> [Scanner Loop]
 - Severity taxonomy coarse; lacks numeric risk scoring (planned for Core; Intelligence layer adds risk_subscores & probability modeling).
 - Compliance remediation hints currently heuristic; deeper mapping pending external knowledge base.
 
-## Intelligence Layer (Proprietary) Overview
-The optional `agent/` Python layer ingests Core JSON, enriches with:
-- Baseline rarity & anomaly scoring
-- Deterministic correlations & sequence analysis
-- Compliance gap normalization & richer remediation mapping
-- HTML reporting & diff generation
-It is licensed separately (see LICENSE) and not required for Core scanning.
-
-## Licensing Architecture
-The project adopts a hybrid model:
-- Core scanner: MIT (allows broad reuse & embedding)
-- Intelligence layer: Proprietary evaluation license
-
-Design separation is enforced at directory boundaries; no proprietary symbols are required to compile or run the Core binary.
+<!-- Intelligence layer section removed: repository is MIT-only on origin/main. -->
 - Pretty printer is bespoke; may not preserve ordering if future nested objects added (evaluate rapidjson or nlohmann/json purely for formatting when pretty enabled).
 
 ---

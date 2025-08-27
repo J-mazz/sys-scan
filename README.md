@@ -1,6 +1,6 @@
 # sys-scan
 
-![CI](https://github.com/J-mazz/sys-scan/actions/workflows/ci.yml/badge.svg) ![License: Hybrid](https://img.shields.io/badge/License-Hybrid-blue.svg)
+![CI](https://github.com/J-mazz/sys-scan/actions/workflows/ci.yml/badge.svg) ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 I started sys-scan as a way to refine my C++ skills and practice prompt engineering while creating something genuinely useful for myself as a Linux user and for the small network of machines I administer. I initially used GitHub Copilot in agent mode to scaffold the project, then manually refactored and extended it with new features, relying on Copilot only as an assistant rather than the driver for most of the development. I’m still learning C++, and this project has been a hands-on way to grow while building a tool I hope others will also find valuable. I plan to keep expanding sys-scan, and I welcome contributions from anyone interested in practical, free security utilities.
 
@@ -289,43 +289,9 @@ See also inline comments / issues. Near‑term concepts:
 * Enhanced network exposure heuristics & fan‑out thresholds.
 * Additional output signing backends (cosign, age).
 
-### Intelligence Layer (Agent MVP – Proprietary)
-
-An experimental Python intelligence layer prototype now lives under `agent/` providing:
-* Schema validation & typed parsing (Pydantic subset + extensions: host_id, scan_id, tags, risk_subscores)
-* Deterministic correlation (Phase 1 simple rules distinct from C++ emission-time rules)
-* Baseline-ready design (SQLite store scaffold in `baseline.py`)
-* Cost / token reduction (module, SUID, network summarizers) prior to any LLM usage
-* Stub LLM summarizer (deterministic) with pluggable future LangGraph integration
-* Structured enriched artifact (correlations, reductions, actions, summaries)
-
-Quick start:
-```bash
-python -m venv agent/.venv
-source agent/.venv/bin/activate
-pip install -r agent/requirements.txt
-./build/sys-scan --pretty --output report.json
-python -m agent.cli analyze --report report.json --out enriched_report.json
-jq '.summaries.executive_summary' enriched_report.json
-```
-
-Planned next phases:
-1. Integrate LangGraph stateful nodes (stream partial reductions as scanners finish)
-2. Baseline diff persistence (host_id + finding identity hash) feeding rarity scoring
-3. Expanded deterministic correlations (multi-finding joins, exposure scoring)
-4. Allowlist & rarity-driven risk_subscores feeding revised composite risk formula
-5. Multi-format outputs (analyst markdown, slack snippet, remediation playbook YAML)
-6. Action planner triggering optional secondary collection tasks
-
-This layer stays optional and out-of-path for the core C++ scanner; it consumes the existing stable JSON. It is distributed under a proprietary license (see `LICENSE`) while the Core scanner remains MIT.
-
----
+----
 ## 17. License & Usage
-Hybrid model:
-* Core scanner (C++ code under `src/`, schemas, rules) – MIT License.
-* Intelligence Layer (`agent/`) – Proprietary (internal evaluation use only unless separately licensed).
-
-See `LICENSE` for full hybrid terms and SPDX identifiers.
+Licensed under the MIT License. See `LICENSE`.
 
 
 ## CLI Overview
