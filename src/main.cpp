@@ -9,7 +9,10 @@
 #include "core/Config.h"
 #include <fstream>
 #include "core/Privilege.h"
-#include "generated/BuildInfo.h"
+#include "BuildInfo.h"
+#ifdef SYS_SCAN_HAVE_OPENSSL
+#include <openssl/evp.h>
+#endif
 
 using namespace sys_scan;
 
