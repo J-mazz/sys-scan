@@ -78,7 +78,7 @@ CLI -> Config -> ScannerRegistry -> [Scanner Loop]
 - Severity taxonomy coarse; lacks numeric risk scoring (planned for Core; Intelligence layer adds risk_subscores & probability modeling).
 - Compliance remediation hints currently heuristic; deeper mapping pending external knowledge base.
 
-<!-- Intelligence layer section removed: repository is MIT-only on origin/main. -->
+
 - Pretty printer is bespoke; may not preserve ordering if future nested objects added (evaluate rapidjson or nlohmann/json purely for formatting when pretty enabled).
 
 ---
