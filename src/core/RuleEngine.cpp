@@ -2,6 +2,7 @@
 #include "RuleEngine.h"
 #include "Config.h"
 #include "Logging.h"
+#include "Utils.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -14,8 +15,6 @@ namespace sys_scan {
 
 static RuleEngine* g_engine=nullptr;
 RuleEngine& rule_engine(){ if(!g_engine) g_engine = new RuleEngine(); return *g_engine; }
-
-static std::string trim(const std::string& s){ size_t b=0; while(b<s.size() && isspace((unsigned char)s[b])) ++b; size_t e=s.size(); while(e>b && isspace((unsigned char)s[e-1])) --e; return s.substr(b,e-b); }
 
 // Parse rule file format supporting both legacy single-condition keys and new multi-condition keys.
 // New multi-condition keys use numbered suffix: conditionN.field / conditionN.contains / conditionN.equals / conditionN.regex
@@ -31,12 +30,12 @@ void RuleEngine::load_dir(const std::string& dir, std::string& warning_out){
 		if(rules_.size() >= MAX_RULES){ warnings_.push_back({"","max_rules_exceeded", std::to_string(MAX_RULES)}); warn << "global:max_rules_exceeded="<<MAX_RULES<<";"; break; }
 		std::ifstream ifs(p); if(!ifs) continue; Rule r; bool has_id=false; std::string line; std::unordered_map<std::string, RuleCondition> indexed; // key: N
 		while(std::getline(ifs,line)){
-			line=trim(line); if(line.empty()||line[0]=='#') continue; auto pos=line.find('='); if(pos==std::string::npos) continue; auto k=trim(line.substr(0,pos)); auto v=trim(line.substr(pos+1));
+			line=utils::trim(line); if(line.empty()||line[0]=='#') continue; auto pos=line.find('='); if(pos==std::string::npos) continue; auto k=utils::trim(line.substr(0,pos)); auto v=utils::trim(line.substr(pos+1));
 			if(k=="id"){ r.id=v; has_id=true; }
 			else if(k=="rule_version") { try { r.version = std::stoi(v); } catch(...) { r.version = 0; } if(r.version!=1) { warn << r.id << ":unsupported_version=" << v << ";"; warnings_.push_back({r.id, "unsupported_version", v}); } }
 			else if(k=="scope") r.scope=v; else if(k=="severity"||k=="severity_override") r.severity_override=v; else if(k=="mitre") r.mitre=v;
 			else if(k=="logic") { if(v=="any"||v=="ANY") r.logic_any=true; }
-			else if(k=="field") r.legacy_field=v; else if(k=="contains") r.legacy_contains=v; else if(k=="equals") r.legacy_equals=v; // legacy single
+			else if(k=="field") r.legacy_field=v; else if(k=="contains") r.legacy_contains=v; else if(k=="equals") r.legacy_equals=v; else if(k=="regex") r.legacy_regex=v; // legacy single
 			else {
 				// conditionN.key
 				auto dot = k.find('.'); if(dot!=std::string::npos){
@@ -56,8 +55,8 @@ void RuleEngine::load_dir(const std::string& dir, std::string& warning_out){
 			for(auto& kv : indexed){ int n=0; try{ n=std::stoi(kv.first);}catch(...){ } tmp.emplace_back(n, kv.second); }
 			std::sort(tmp.begin(), tmp.end(), [](auto&a, auto&b){ return a.first < b.first; });
 			for(auto& pr: tmp){ r.conditions.push_back(std::move(pr.second)); }
-		} else if(!r.legacy_field.empty() || !r.legacy_contains.empty() || !r.legacy_equals.empty()) {
-			RuleCondition rc; rc.field = r.legacy_field; rc.contains = r.legacy_contains; rc.equals = r.legacy_equals; r.conditions.push_back(std::move(rc));
+		} else if(!r.legacy_field.empty() || !r.legacy_contains.empty() || !r.legacy_equals.empty() || !r.legacy_regex.empty()) {
+			RuleCondition rc; rc.field = r.legacy_field; rc.contains = r.legacy_contains; rc.equals = r.legacy_equals; rc.regex = r.legacy_regex; r.conditions.push_back(std::move(rc));
 		}
 		if(r.conditions.empty()) { warn << r.id << ":no_conditions;"; warnings_.push_back({r.id, "no_conditions", ""}); }
 		else {
@@ -83,6 +82,8 @@ static bool match_condition(const RuleCondition& rc, const Finding& f){
 	else {
 		auto it = f.metadata.find(rc.field); if(it!=f.metadata.end()) target=&it->second; else return false;
 	}
+	// Guardrail: a condition with only a field selector and no constraints should not auto-match everything.
+	if(rc.contains.empty() && rc.equals.empty() && !rc.compiled && rc.regex.empty()) return false;
 	if(!rc.contains.empty() && target->find(rc.contains)==std::string::npos) return false;
 	if(!rc.equals.empty() && *target != rc.equals) return false;
 	if(rc.compiled) { if(!std::regex_search(*target, *rc.compiled)) return false; }
@@ -100,8 +101,7 @@ void RuleEngine::apply(const std::string& scanner, Finding& f) const {
 		if(!r.mitre.empty()) {
 			auto & mt = f.metadata["mitre_techniques"]; 
 			// Build set of existing tokens preserving insertion order via vector+set
-			auto split = [](const std::string& s){ std::vector<std::string> out; std::string cur; for(char c: s){ if(c==','){ if(!cur.empty()) { // trim
-					 size_t b=0; while(b<cur.size() && isspace((unsigned char)cur[b])) ++b; size_t e=cur.size(); while(e>b && isspace((unsigned char)cur[e-1])) --e; if(e>b) out.push_back(cur.substr(b,e-b)); cur.clear(); } } else cur.push_back(c);} if(!cur.empty()){ size_t b=0; while(b<cur.size() && isspace((unsigned char)cur[b])) ++b; size_t e=cur.size(); while(e>b && isspace((unsigned char)cur[e-1])) --e; if(e>b) out.push_back(cur.substr(b,e-b)); } return out; };
+			auto split = [](const std::string& s){ std::vector<std::string> out; std::string cur; for(char c: s){ if(c==','){ if(!cur.empty()) { out.push_back(utils::trim(cur)); cur.clear(); } } else cur.push_back(c);} if(!cur.empty()){ out.push_back(utils::trim(cur)); } return out; };
 			std::vector<std::string> existing = split(mt);
 			std::unordered_set<std::string> seen(existing.begin(), existing.end());
 			std::vector<std::string> added = split(r.mitre);
